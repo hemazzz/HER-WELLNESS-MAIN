@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 340 30% 98%;
+    --foreground: 340 40% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 340 40% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 340 40% 10%;
+
+    --primary: 340 82% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 340 40% 95%;
+    --secondary-foreground: 340 40% 15%;
+
+    --muted: 340 20% 94%;
+    --muted-foreground: 340 10% 45%;
+
+    --accent: 340 60% 92%;
+    --accent-foreground: 340 40% 15%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 340 20% 90%;
+    --input: 340 20% 88%;
+    --ring: 340 82% 52%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 340 30% 97%;
+    --sidebar-foreground: 340 10% 30%;
+    --sidebar-primary: 340 82% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 340 40% 94%;
+    --sidebar-accent-foreground: 340 40% 15%;
+    --sidebar-border: 340 20% 90%;
+    --sidebar-ring: 340 82% 52%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+
+    --gradient-pink: linear-gradient(135deg, hsl(340, 82%, 52%), hsl(320, 70%, 60%));
+    --gradient-soft: linear-gradient(135deg, hsl(340, 60%, 95%), hsl(320, 50%, 97%));
+  }
+
+  .dark {
+    --background: 340 30% 5%;
+    --foreground: 340 10% 95%;
+    --card: 340 20% 8%;
+    --card-foreground: 340 10% 95%;
+    --popover: 340 20% 8%;
+    --popover-foreground: 340 10% 95%;
+    --primary: 340 82% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 340 20% 15%;
+    --secondary-foreground: 340 10% 90%;
+    --muted: 340 15% 15%;
+    --muted-foreground: 340 10% 60%;
+    --accent: 340 30% 15%;
+    --accent-foreground: 340 10% 90%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 340 15% 18%;
+    --input: 340 15% 18%;
+    --ring: 340 82% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer utilities {
+  .gradient-pink {
+    background: var(--gradient-pink);
+  }
+  .gradient-soft {
+    background: var(--gradient-soft);
+  }
+}
