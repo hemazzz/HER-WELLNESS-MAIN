@@ -1,205 +1,656 @@
-import { useEffect, useState } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Activity, Droplets, Moon, Footprints, Plus, TrendingUp, Heart } from 'lucide-react';
-import { api } from '@/lib/mock-api';
-import { HealthData } from '@/lib/types';
-import { format } from 'date-fns';
-import { toast } from 'sonner';
+import { useEffect, useState } from "react";
 
-const getCategory = (score: number) => {
-  if (score >= 80) return { label: 'Excellent', color: 'text-green-600' };
-  if (score >= 60) return { label: 'Good', color: 'text-blue-600' };
-  if (score >= 40) return { label: 'Average', color: 'text-yellow-600' };
-  return { label: 'Poor', color: 'text-red-600' };
-};
+import DashboardLayout from "@/components/DashboardLayout";
 
-const suggestions = [
-  'Drink at least 8 glasses of water today 💧',
-  'Walk 8,000 steps for better heart health 🚶‍♀️',
-  'Get 7-8 hours of quality sleep tonight 🌙',
-  'Eat iron-rich foods like spinach and lentils 🥬',
-  'Practice 15 minutes of yoga or stretching 🧘‍♀️',
-  'Take a 5-minute breathing break to reduce stress 🌸',
-];
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+
+import { Button } from "@/components/ui/button";
+
+import { Slider } from "@/components/ui/slider";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
+import { api } from "@/lib/api";
 
 const Dashboard = () => {
-  const [data, setData] = useState<HealthData[]>([]);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ sleepHours: 7, stepsWalked: 5000, waterIntake: 6, stressLevel: 5, dietQuality: 6, date: format(new Date(), 'yyyy-MM-dd') });
 
-  useEffect(() => { api.getHealthData().then(setData); }, []);
+  const [data, setData] =
+    useState<any[]>([]);
 
-  const today = data[data.length - 1];
-  const cat = today ? getCategory(today.healthScore) : null;
+  const [open, setOpen] =
+    useState(false);
 
-  const handleAdd = async () => {
+  const [loading, setLoading] =
+    useState(false);
+
+  const [form, setForm] =
+    useState({
+
+      sleepHours: 7,
+      stepsWalked: 5000,
+      waterIntake: 6,
+      stressLevel: 5,
+      dietQuality: 6,
+
+    });
+
+  // 🔥 LOAD DATA
+  const loadData = async () => {
+
     try {
-      await api.addHealthData(form);
-      const updated = await api.getHealthData();
-      setData(updated);
-      setOpen(false);
-      toast.success('Health data recorded!');
-    } catch { toast.error('Failed to save'); }
+
+      const res =
+        await api.getHealthData();
+
+      console.log(
+        "HEALTH DATA:",
+        res
+      );
+
+      setData(
+        Array.isArray(res)
+          ? res
+          : []
+      );
+
+    } catch (err) {
+
+      console.log(
+        "Error loading data:",
+        err
+      );
+
+    }
+
   };
 
-  const chartData = data.map(d => ({
-    date: format(new Date(d.date), 'EEE'),
-    score: d.healthScore,
-    sleep: d.sleepHours,
-    water: d.waterIntake,
-    steps: Math.round(d.stepsWalked / 1000),
-  }));
+  useEffect(() => {
+
+    loadData();
+
+  }, []);
+
+  // 🔥 HEALTH SCORE
+  const calculateScore =
+    (d: any) => {
+
+      if (!d) return 0;
+
+      const sleep =
+        d.sleepHours || 0;
+
+      const water =
+        d.waterIntake || 0;
+
+      const steps =
+        d.stepsWalked || 0;
+
+      const diet =
+        d.dietQuality || 0;
+
+      const stress =
+        d.stressLevel || 0;
+
+      let score =
+
+        sleep * 10 +
+
+        water * 5 +
+
+        (steps / 1000) * 5 +
+
+        diet * 10 -
+
+        stress * 5;
+
+      return Math.max(
+        0,
+        Math.min(
+          100,
+          Math.round(score)
+        )
+      );
+
+    };
+
+  // 🔥 SAVE
+  const handleAdd = async () => {
+
+    try {
+
+      setLoading(true);
+
+      const response =
+        await api.addHealthData({
+
+          ...form,
+
+          date:
+            new Date(),
+
+        });
+
+      console.log(
+        "SAVE RESPONSE:",
+        response
+      );
+
+      await loadData();
+
+      setOpen(false);
+
+    } catch (err) {
+
+      console.log(
+        "Save failed:",
+        err
+      );
+
+      alert(
+        "Failed to save health data ❌"
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  };
+
+  const latest =
+    data.length > 0
+      ? data[data.length - 1]
+      : null;
+
+  // 🔥 SCORE
+  const score =
+    latest
+      ? latest.healthScore ||
+        calculateScore(latest)
+      : 0;
+
+  // 🔥 AI SUMMARY
+  const generateSummary =
+    () => {
+
+      const messages = [];
+
+      if (
+        latest?.protein >= 60
+      ) {
+
+        messages.push(
+          "💪 Protein intake supports your hormonal and thyroid health."
+        );
+
+      }
+
+      if (
+        latest?.waterIntake < 5
+      ) {
+
+        messages.push(
+          "💧 Water intake is slightly low today."
+        );
+
+      }
+
+      if (
+        latest?.stepsWalked < 5000
+      ) {
+
+        messages.push(
+          "🚶 Try walking more for better wellness and metabolism."
+        );
+
+      }
+
+      if (
+        latest?.stressLevel > 7
+      ) {
+
+        messages.push(
+          "🧘 High stress detected. Relaxation may help."
+        );
+
+      }
+
+      if (
+        latest?.sleepHours < 6
+      ) {
+
+        messages.push(
+          "😴 Sleep duration is low. Proper sleep improves recovery."
+        );
+
+      }
+
+      if (
+        messages.length === 0
+      ) {
+
+        messages.push(
+          "🌸 Your wellness looks balanced today."
+        );
+
+      }
+
+      return messages;
+
+    };
+
+  const aiSummary =
+    generateSummary();
+
+  // 🔥 HEALTH STATUS
+  const getHealthStatus =
+    () => {
+
+      if (score >= 80) {
+
+        return {
+
+          text:
+            "Excellent Health 🌸",
+
+          color:
+            "text-green-600",
+
+          bg:
+            "bg-green-100",
+
+        };
+
+      }
+
+      if (score >= 60) {
+
+        return {
+
+          text:
+            "Good Health 💪",
+
+          color:
+            "text-blue-600",
+
+          bg:
+            "bg-blue-100",
+
+        };
+
+      }
+
+      if (score >= 40) {
+
+        return {
+
+          text:
+            "Average Health ⚠️",
+
+          color:
+            "text-yellow-600",
+
+          bg:
+            "bg-yellow-100",
+
+        };
+
+      }
+
+      return {
+
+        text:
+          "Health Needs Attention ❤️",
+
+        color:
+          "text-red-600",
+
+        bg:
+          "bg-red-100",
+
+      };
+
+    };
+
+  const healthStatus =
+    getHealthStatus();
 
   return (
+
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Health Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Track your daily wellness</p>
-          </div>
-          <Dialog open={open} onOpenChange={setOpen}>
+
+      <div className="space-y-6">
+
+        {/* 🔥 HEADER */}
+        <div className="flex justify-between items-center mt-2">
+
+          <h1 className="text-3xl font-bold">
+
+            AI Wellness Dashboard
+
+          </h1>
+
+          {/* 🔥 DIALOG */}
+          <Dialog
+            open={open}
+            onOpenChange={setOpen}
+          >
+
             <DialogTrigger asChild>
-              <Button className="gradient-pink text-primary-foreground border-0 rounded-full gap-2">
-                <Plus className="w-4 h-4" /> Log Today
+
+              <Button>
+
+                Add Today
+
               </Button>
+
             </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader><DialogTitle>Log Health Data</DialogTitle></DialogHeader>
-              <div className="space-y-4 pt-2">
-                <div className="space-y-2">
-                  <Label>Date</Label>
-                  <Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Sleep Hours: {form.sleepHours}h</Label>
-                  <Slider value={[form.sleepHours]} onValueChange={v => setForm({ ...form, sleepHours: v[0] })} min={0} max={12} step={0.5} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Steps Walked: {form.stepsWalked.toLocaleString()}</Label>
-                  <Slider value={[form.stepsWalked]} onValueChange={v => setForm({ ...form, stepsWalked: v[0] })} min={0} max={20000} step={500} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Water Intake: {form.waterIntake} glasses</Label>
-                  <Slider value={[form.waterIntake]} onValueChange={v => setForm({ ...form, waterIntake: v[0] })} min={0} max={15} step={1} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Stress Level: {form.stressLevel}/10</Label>
-                  <Slider value={[form.stressLevel]} onValueChange={v => setForm({ ...form, stressLevel: v[0] })} min={1} max={10} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Diet Quality: {form.dietQuality}/10</Label>
-                  <Slider value={[form.dietQuality]} onValueChange={v => setForm({ ...form, dietQuality: v[0] })} min={1} max={10} />
-                </div>
-                <Button onClick={handleAdd} className="w-full gradient-pink text-primary-foreground border-0 rounded-full">Save</Button>
+
+            <DialogContent>
+
+              <DialogHeader>
+
+                <DialogTitle>
+
+                  Log Health Data
+
+                </DialogTitle>
+
+              </DialogHeader>
+
+              <div className="space-y-4">
+
+                {/* 😴 SLEEP */}
+                <p>
+                  Sleep:
+                  {" "}
+                  {form.sleepHours} hrs
+                </p>
+
+                <Slider
+                  value={[
+                    form.sleepHours
+                  ]}
+                  onValueChange={(v) =>
+                    setForm({
+
+                      ...form,
+
+                      sleepHours:
+                        v[0],
+
+                    })
+                  }
+                  max={12}
+                />
+
+                {/* 🚶 STEPS */}
+                <p>
+                  Steps:
+                  {" "}
+                  {form.stepsWalked}
+                </p>
+
+                <Slider
+                  value={[
+                    form.stepsWalked
+                  ]}
+                  onValueChange={(v) =>
+                    setForm({
+
+                      ...form,
+
+                      stepsWalked:
+                        v[0],
+
+                    })
+                  }
+                  max={20000}
+                />
+
+                {/* 💧 WATER */}
+                <p>
+                  Water:
+                  {" "}
+                  {form.waterIntake}
+                </p>
+
+                <Slider
+                  value={[
+                    form.waterIntake
+                  ]}
+                  onValueChange={(v) =>
+                    setForm({
+
+                      ...form,
+
+                      waterIntake:
+                        v[0],
+
+                    })
+                  }
+                  max={15}
+                />
+
+                {/* 🧘 STRESS */}
+                <p>
+                  Stress:
+                  {" "}
+                  {form.stressLevel}
+                </p>
+
+                <Slider
+                  value={[
+                    form.stressLevel
+                  ]}
+                  onValueChange={(v) =>
+                    setForm({
+
+                      ...form,
+
+                      stressLevel:
+                        v[0],
+
+                    })
+                  }
+                  max={10}
+                />
+
+                {/* 🥗 DIET */}
+                <p>
+                  Diet:
+                  {" "}
+                  {form.dietQuality}
+                </p>
+
+                <Slider
+                  value={[
+                    form.dietQuality
+                  ]}
+                  onValueChange={(v) =>
+                    setForm({
+
+                      ...form,
+
+                      dietQuality:
+                        v[0],
+
+                    })
+                  }
+                  max={10}
+                />
+
+                {/* 🔥 SAVE */}
+                <Button
+                  onClick={handleAdd}
+                  className="w-full bg-pink-500 hover:bg-pink-600"
+                  disabled={loading}
+                >
+
+                  {loading
+                    ? "Saving..."
+                    : "Save"}
+
+                </Button>
+
               </div>
+
             </DialogContent>
+
           </Dialog>
+
         </div>
 
-        {/* Score Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-border/50">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
-                <Activity className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Health Score</p>
-                <p className={`text-xl font-bold ${cat?.color || ''}`}>{today?.healthScore ?? '--'}</p>
-                <p className={`text-xs font-medium ${cat?.color || ''}`}>{cat?.label || '--'}</p>
-              </div>
+        {/* 🔥 STATS */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+
+          <Card>
+            <CardContent className="p-4">
+
+              <p className="text-sm text-gray-500">
+                Health Score
+              </p>
+
+              <h2 className="text-2xl font-bold text-pink-600">
+                {score}
+              </h2>
+
             </CardContent>
           </Card>
-          <Card className="border-border/50">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
-                <Moon className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Sleep</p>
-                <p className="text-xl font-bold text-foreground">{today?.sleepHours ?? '--'}h</p>
-              </div>
+
+          <Card>
+            <CardContent className="p-4">
+
+              <p className="text-sm text-gray-500">
+                Calories
+              </p>
+
+              <h2 className="text-2xl font-bold text-orange-500">
+                {latest?.calories || 0}
+              </h2>
+
             </CardContent>
           </Card>
-          <Card className="border-border/50">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
-                <Droplets className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Water</p>
-                <p className="text-xl font-bold text-foreground">{today?.waterIntake ?? '--'} glasses</p>
-              </div>
+
+          <Card>
+            <CardContent className="p-4">
+
+              <p className="text-sm text-gray-500">
+                Protein
+              </p>
+
+              <h2 className="text-2xl font-bold text-blue-500">
+                {latest?.protein || 0} g
+              </h2>
+
             </CardContent>
           </Card>
-          <Card className="border-border/50">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
-                <Footprints className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Steps</p>
-                <p className="text-xl font-bold text-foreground">{today?.stepsWalked?.toLocaleString() ?? '--'}</p>
-              </div>
+
+          <Card>
+            <CardContent className="p-4">
+
+              <p className="text-sm text-gray-500">
+                Water
+              </p>
+
+              <h2 className="text-2xl font-bold text-cyan-500">
+                {latest?.waterIntake || 0}
+              </h2>
+
             </CardContent>
           </Card>
+
+          <Card>
+            <CardContent className="p-4">
+
+              <p className="text-sm text-gray-500">
+                Stress
+              </p>
+
+              <h2 className="text-2xl font-bold text-red-500">
+                {latest?.stressLevel || 0}
+              </h2>
+
+            </CardContent>
+          </Card>
+
         </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="border-border/50">
-            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><TrendingUp className="w-5 h-5 text-primary" />Weekly Health Score</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip />
-                  <Bar dataKey="score" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-          <Card className="border-border/50">
-            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Moon className="w-5 h-5 text-primary" />Sleep & Water Trends</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={240}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="sleep" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))' }} name="Sleep (h)" />
-                  <Line type="monotone" dataKey="water" stroke="hsl(217, 91%, 60%)" strokeWidth={2} dot={{ fill: 'hsl(217, 91%, 60%)' }} name="Water" />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
+        {/* 🔥 AI WELLNESS SUMMARY */}
+        <Card className="border-pink-200 shadow-lg">
 
-        {/* Suggestions */}
-        <Card className="border-border/50">
-          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Heart className="w-5 h-5 text-primary" />Daily Recommendations</CardTitle></CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {suggestions.map(s => (
-                <div key={s} className="p-3 rounded-xl bg-accent/50 border border-border/50 text-sm text-foreground">{s}</div>
-              ))}
+          <CardHeader>
+
+            <CardTitle>
+
+              AI Wellness Summary 🌸
+
+            </CardTitle>
+
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+
+            {/* STATUS */}
+            <div
+              className={`${healthStatus.bg} p-4 rounded-xl`}
+            >
+
+              <h2
+                className={`text-xl font-bold ${healthStatus.color}`}
+              >
+
+                {healthStatus.text}
+
+              </h2>
+
             </div>
+
+            {/* AI SUMMARY */}
+            <div className="space-y-3">
+
+              {aiSummary.map(
+                (
+                  item,
+                  index
+                ) => (
+
+                  <div
+                    key={index}
+                    className="bg-pink-50 p-4 rounded-xl text-sm"
+                  >
+
+                    {item}
+
+                  </div>
+
+                )
+              )}
+
+            </div>
+
           </CardContent>
+
         </Card>
+
       </div>
+
     </DashboardLayout>
+
   );
+
 };
 
 export default Dashboard;

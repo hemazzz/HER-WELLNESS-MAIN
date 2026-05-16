@@ -1,8 +1,17 @@
 import express from "express";
+
 import { chat } from "../controllers/chatbotController.js";
+
+// 🔥 IMPORT AUTH
+import  authMiddleware  from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/", chat);
+// 🔥 PROTECTED CHAT ROUTE
+router.post(
+  "/",
+  authMiddleware,
+  chat
+);
 
 export default router;

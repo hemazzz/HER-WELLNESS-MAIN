@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  sendOtp,        // 🔥 ADD THIS
   register,
   login,
   verifyOTP,
@@ -9,9 +10,15 @@ import {
 
 const router = express.Router();
 
+// 🔹 OTP FLOW
+router.post("/send-otp", sendOtp);
+router.post("/verify-otp", verifyOTP);
+
+// 🔹 AUTH
 router.post("/register", register);
 router.post("/login", login);
-router.post("/verify-otp", verifyOTP);
+
+// 🔹 PASSWORD RESET
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 

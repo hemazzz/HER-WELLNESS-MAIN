@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -15,21 +16,24 @@ import DietPlan from "./pages/DietPlan";
 import PeriodTracker from "./pages/PeriodTracker";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import Register from "./pages/Register";
 
 const queryClient = new QueryClient();
 
+// 🔒 Protected Route (ONLY THIS USE)
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isLoading } = useAuth();
+  const token = localStorage.getItem("token");
 
   if (isLoading) {
     return (
-      <div className="min-h-screen gradient-soft flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
       </div>
     );
   }
 
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+  return token ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 const App = () => (
@@ -37,19 +41,22 @@ const App = () => (
     <TooltipProvider>
       <Sonner />
       <AuthProvider>
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
+        <BrowserRouter>
           <Routes>
+
+            {/* 🌐 PUBLIC */}
             <Route path="/" element={<Landing />} />
+
+            {/* 🔥 NO PublicRoute */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+
+            {/* OTP FLOW */}
             <Route path="/verify-otp" element={<VerifyOtp />} />
+            <Route path="/set-password" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
 
+            {/* 🔒 PROTECTED */}
             <Route
               path="/health-profile"
               element={
@@ -104,7 +111,9 @@ const App = () => (
               }
             />
 
+            {/* ❌ NOT FOUND */}
             <Route path="*" element={<NotFound />} />
+
           </Routes>
         </BrowserRouter>
       </AuthProvider>

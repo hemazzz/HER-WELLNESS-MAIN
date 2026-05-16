@@ -4,28 +4,27 @@ import jwt from "jsonwebtoken";
 import otpGenerator from "otp-generator";
 import nodemailer from "nodemailer";
 
-// 📧 MAIL CONFIG (SMTP use pannom 🔥)
+// 📧 MAIL CONFIG (⚠️ move to .env later da)
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
   secure: false,
   auth: {
-    user: "hemadharshini0109@gmail.com",       // 🔥 un gmail
-    pass: "qplj dela fsti gezx"            // 🔥 app password
+    user: "hemadharshini0109@gmail.com",
+    pass: "qplj dela fsti gezx"
   }
 });
 
-// 🔹 REGISTER + OTP
-export const register = async (req, res) => {
-  try {
-    const { email, password } = req.body;
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+// 🔹 SEND OTP
+export const sendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email required" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
     const otp = otpGenerator.generate(6, {
       upperCase: false,
       specialChars: false
@@ -33,154 +32,193 @@ export const register = async (req, res) => {
 
     console.log("Generated OTP:", otp);
 
-    const user = new User({
-      email,
-      password: hashedPassword,
-      otp,
-      otpExpiry: Date.now() + 5 * 60 * 1000
+    await User.findOneAndUpdate(
+      { email },
+      {
+        email,
+        otp,
+        otpExpiry: Date.now() + 5 * 60 * 1000,
+        isVerified: false
+      },
+      { upsert: true, new: true }
+    );
+
+    await transporter.sendMail({
+      from: '"Her Wellness App" <hemadharshini0109@gmail.com>',
+      to: email,
+      subject: "OTP Verification",
+      text: `Your OTP is ${otp} (valid for 5 minutes)`
     });
+
+    res.json({ message: "OTP sent successfully" });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Error sending OTP" });
+  }
+};
+
+
+// 🔹 VERIFY OTP
+export const verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.otp || user.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (user.otpExpiry < Date.now()) {
+      return res.status(400).json({ message: "OTP expired" });
+    }
+
+    user.isVerified = true;
+    user.otp = null;
+    user.otpExpiry = null;
 
     await user.save();
 
-    // 📩 SEND MAIL
-    try {
-      const info = await transporter.sendMail({
-        from: '"Her Wellness App" <YOUR_GMAIL@gmail.com>',
-        to:"YOUR_GMAIL@gmail.com",
-        subject: "OTP Verification",
-        text: `Hello,
+    res.json({ message: "OTP verified successfully" });
 
-Your OTP is ${otp}
+  } catch (err) {
+    res.status(500).json({ message: "OTP verification failed" });
+  }
+};
 
-Valid for 5 minutes.`
-      });
 
-      console.log("Mail sent ✅:", info.response);
+// 🔹 REGISTER
+export const register = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-    } catch (err) {
-      console.log("MAIL ERROR ❌:", err);
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json({ message: "Send OTP first" });
     }
 
-    res.json({ message: "OTP sent" });
+    if (!user.isVerified) {
+      return res.status(400).json({ message: "Verify OTP first" });
+    }
+
+    if (!password) {
+      return res.status(400).json({ message: "Password required" });
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    await user.save();
+
+    res.json({ message: "User registered successfully" });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// 🔹 VERIFY OTP
-export const verifyOTP = async (req, res) => {
-  const { email, otp } = req.body;
 
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
-  }
-
-  if (user.otp !== otp) {
-    return res.status(400).json({ message: "Invalid OTP" });
-  }
-
-  if (user.otpExpiry < Date.now()) {
-    return res.status(400).json({ message: "OTP expired" });
-  }
-
-  user.isVerified = true;
-  user.otp = null;
-  user.otpExpiry = null;
-
-  await user.save();
-
-  res.json({ message: "OTP verified successfully" });
-};
-
-// 🔹 LOGIN
+// 🔥 LOGIN
 export const login = async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const user = await User.findOne({ email });
+    const user = await User.findOne({ email });
 
-  if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(400).json({ message: "User not found ❌" });
+    }
 
-  if (!user.isVerified)
-    return res.status(400).json({ message: "Verify email first" });
+    const isMatch = await bcrypt.compare(password, user.password);
 
-  const match = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Wrong password ❌" });
+    }
 
-  if (!match)
-    return res.status(400).json({ message: "Wrong password" });
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
-  const token = jwt.sign({ id: user._id }, "SECRET_KEY", {
-    expiresIn: "1d"
-  });
-
-  res.json({ token });
+    res.json({ token });
+  } catch (err) {
+    res.status(500).json({ message: "Login error ❌" });
+  }
 };
 
 // 🔹 FORGOT PASSWORD
 export const forgotPassword = async (req, res) => {
-  const { email } = req.body;
-
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
-  }
-
-  const otp = otpGenerator.generate(6, {
-    upperCase: false,
-    specialChars: false
-  });
-
-  console.log("Reset OTP:", otp);
-
-  user.otp = otp;
-  user.otpExpiry = Date.now() + 5 * 60 * 1000;
-
-  await user.save();
-
   try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const otp = otpGenerator.generate(6, {
+      upperCase: false,
+      specialChars: false
+    });
+
+    console.log("Reset OTP:", otp);
+
+    user.otp = otp;
+    user.otpExpiry = Date.now() + 5 * 60 * 1000;
+
+    await user.save();
+
     await transporter.sendMail({
-      from: '"Her Wellness App" <YOUR_GMAIL@gmail.com>',
-      to:"YOUR_GMAIL@gmail.com",
+      from: '"Her Wellness App" <hemadharshini0109@gmail.com>',
+      to: email,
       subject: "Reset Password OTP",
       text: `Your OTP is ${otp}`
     });
 
-    console.log("Mail sent ✅");
-  } catch (err) {
-    console.log("MAIL ERROR ❌:", err);
-  }
+    res.json({ message: "OTP sent" });
 
-  res.json({ message: "OTP sent" });
+  } catch (err) {
+    res.status(500).json({ message: "Error sending OTP" });
+  }
 };
+
 
 // 🔹 RESET PASSWORD
 export const resetPassword = async (req, res) => {
-  const { email, otp, newPassword } = req.body;
+  try {
+    const { email, otp, newPassword } = req.body;
 
-  const user = await User.findOne({ email });
+    const user = await User.findOne({ email });
 
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.otp || user.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (user.otpExpiry < Date.now()) {
+      return res.status(400).json({ message: "OTP expired" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.otp = null;
+    user.otpExpiry = null;
+
+    await user.save();
+
+    res.json({ message: "Password updated successfully" });
+
+  } catch (err) {
+    res.status(500).json({ message: "Reset password error" });
   }
-
-  if (user.otp !== otp) {
-    return res.status(400).json({ message: "Invalid OTP" });
-  }
-
-  if (user.otpExpiry < Date.now()) {
-    return res.status(400).json({ message: "OTP expired" });
-  }
-
-  user.password = await bcrypt.hash(newPassword, 10);
-  user.otp = null;
-  user.otpExpiry = null;
-
-  await user.save();
-
-  res.json({ message: "Password updated successfully" });
 };
 
 

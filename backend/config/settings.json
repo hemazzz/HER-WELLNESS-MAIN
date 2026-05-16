@@ -1,0 +1,6 @@
+{
+  "cacheTime": 900,
+  "maxRequests": 3,
+  "openRouterModel": "openai/gpt-4o-mini",
+  "timeout": 10000
+}

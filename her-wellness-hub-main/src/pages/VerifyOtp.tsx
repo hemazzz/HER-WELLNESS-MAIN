@@ -14,8 +14,7 @@ const VerifyOtp = () => {
   const navigate = useNavigate();
   const { verifyOtp } = useAuth();
   const email = (location.state as any)?.email || localStorage.getItem('pending_email') || '';
-
-  const handleVerify = async () => {
+const handleVerify = async () => {
   if (otp.length < 6) {
     toast.error('Please enter complete OTP');
     return;
@@ -33,7 +32,6 @@ const VerifyOtp = () => {
     });
 
     const data = await res.json();
-    console.log(data);
 
     if (!res.ok) {
       throw new Error(data.message || "Invalid OTP");
@@ -41,7 +39,8 @@ const VerifyOtp = () => {
 
     toast.success('OTP Verified ✅');
 
-    navigate('/login');
+    // 🔥 IMPORTANT CHANGE
+    navigate('/set-password', { state: { email } });
 
   } catch (err: any) {
     console.log(err);

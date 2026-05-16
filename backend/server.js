@@ -3,43 +3,93 @@ import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 
+import authMiddleware from "./middleware/authMiddleware.js";
+
 import authRoutes from "./routes/authRoutes.js";
 import chatbotRoutes from "./routes/chatbotRoutes.js";
 import dietRoutes from "./routes/dietRoutes.js";
+import healthRoutes from "./routes/healthRoutes.js";
+import profileRoutes from "./routes/profileRoutes.js";
 
-// ✅ load env FIRST
+// ✅ LOAD ENV
 dotenv.config();
 
 const app = express();
 
-// ❌ REMOVE Gemini debug
-// console.log("GEMINI KEY:", process.env.GEMINI_API_KEY);
+// ✅ DEBUG
+console.log(
+  "🔍 MONGO URI loaded:",
+  !!process.env.MONGO_URI
+);
 
-// ✅ Optional debug (OpenRouter)
-console.log("OPENROUTER KEY LOADED:", !!process.env.OPENROUTER_API_KEY);
+// ✅ CORS
+app.use(
+  cors({
+    origin: "http://localhost:8082",
+    credentials: true,
+  })
+);
 
-// Middleware
-app.use(cors());
+// ✅ JSON
 app.use(express.json());
 
-// MongoDB connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.log("❌ MongoDB Error:", err));
-
-// Routes
+// ✅ ROUTES
 app.use("/api/auth", authRoutes);
+
 app.use("/api/chat", chatbotRoutes);
+
 app.use("/api/diet", dietRoutes);
 
-// Test route
+app.use("/api/health", healthRoutes);
+
+// 🔥 PROFILE ROUTE WITH AUTH
+app.use(
+  "/api/profile",
+  authMiddleware,
+  profileRoutes
+);
+
+// ✅ ROOT
 app.get("/", (req, res) => {
-  res.send("Her Wellness Backend Running 🚀");
+  res.send("🚀 Her Wellness Backend Running");
 });
 
-// Server start
+// ✅ ERROR HANDLER
+app.use((err, req, res, next) => {
+  console.error("❌ Server Error:", err);
+
+  res.status(500).json({
+    message: "Internal Server Error",
+  });
+});
+
+// ✅ DB CONNECT
+const connectDB = async () => {
+  try {
+    await mongoose.connect(
+      process.env.MONGO_URI
+    );
+
+    console.log("✅ MongoDB Connected");
+
+  } catch (err) {
+
+    console.log(
+      "❌ MongoDB Error:",
+      err.message
+    );
+
+    process.exit(1);
+  }
+};
+
+// ✅ START SERVER
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(
+      `🚀 Server running on port ${PORT}`
+    );
+  });
 });

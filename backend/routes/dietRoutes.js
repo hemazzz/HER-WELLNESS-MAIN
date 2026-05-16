@@ -1,17 +1,35 @@
 import express from "express";
-import { generateDietPlan, getDietHistory } from "../controllers/dietController.js";
+
+import {
+  generateDietPlan,
+  getDietHistory
+} from "../controllers/dietController.js";
+
+import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ✅ Test route
+// ✅ TEST ROUTE
 router.get("/test", (req, res) => {
-  res.json({ message: "Diet route working ✅" });
+
+  res.json({
+    message: "Diet route working ✅"
+  });
+
 });
 
-// 🤖 Generate diet plan
-router.post("/diet-plan", generateDietPlan);
+// 🤖 GENERATE AI DIET PLAN
+router.post(
+  "/diet-plan",
+  authMiddleware,
+  generateDietPlan
+);
 
-// 📜 Get diet history (NEW 🔥)
-router.get("/history", getDietHistory);
+// 📜 GET DIET HISTORY
+router.get(
+  "/history",
+  authMiddleware,
+  getDietHistory
+);
 
 export default router;

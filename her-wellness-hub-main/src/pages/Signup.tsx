@@ -5,53 +5,39 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Heart, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
 
 const Signup = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (password !== confirmPassword) {
-    toast.error('Passwords do not match');
-    return;
-  }
+    setLoading(true);
 
-  setLoading(true);
+    try {
+      // 🔥 SEND OTP
+      const res = await api.sendOtp(email);
 
-  try {
-    const res = await fetch("http://localhost:5000/api/auth/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ email, password })
-    });
+      if (!res.message) {
+        throw new Error("Failed to send OTP");
+      }
 
-    const data = await res.json();
+      toast.success('OTP sent to your email! 📩');
 
-    if (!res.ok) {
-      throw new Error(data.message || "Signup failed");
+      // 👉 move to verify page
+      navigate('/verify-otp', { state: { email } });
+
+    } catch (err: any) {
+      console.log(err);
+      toast.error(err.message || 'Failed to send OTP ❌');
+    } finally {
+      setLoading(false);
     }
-
-    toast.success('OTP sent to your email! 📩');
-
-    navigate('/verify-otp', { state: { email } });
-
-  } catch (err: any) {
-    console.log(err);
-    toast.error(err.message || 'Signup failed ❌');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen gradient-soft flex items-center justify-center px-4">
@@ -64,26 +50,34 @@ const Signup = () => {
             <span className="text-xl font-bold text-foreground">Her Wellness</span>
           </Link>
           <CardTitle className="text-2xl">Create Account</CardTitle>
-          <CardDescription>Join Her Wellness today</CardDescription>
+          <CardDescription>Enter your email to receive OTP</CardDescription>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" placeholder="Create a password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm">Confirm Password</Label>
-              <Input id="confirm" type="password" placeholder="Confirm password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
-            </div>
-            <Button type="submit" className="w-full gradient-pink text-primary-foreground border-0 h-11 rounded-full" disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign Up'}
+
+            <Button
+              type="submit"
+              className="w-full gradient-pink text-primary-foreground border-0 h-11 rounded-full"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send OTP'}
             </Button>
+
           </form>
+
           <p className="text-center text-sm text-muted-foreground mt-6">
             Already have an account? <Link to="/login" className="text-primary hover:underline font-medium">Login</Link>
           </p>
