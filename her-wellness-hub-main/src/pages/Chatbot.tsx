@@ -73,7 +73,7 @@ How can I help you today?`,
 
       // 🔥 BACKEND AI API
       const res = await fetch(
-        "http://16.176.147.35/api/chat",
+        "/api/chat",
         {
           method: "POST",
 

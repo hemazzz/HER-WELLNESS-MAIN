@@ -26,7 +26,7 @@ const Login = () => {
 
     try {
       // 🔥 DIRECT FETCH (BYPASS ALL ISSUES)
-      const res = await fetch("http://16.176.147.35/api/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

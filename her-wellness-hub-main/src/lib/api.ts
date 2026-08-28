@@ -1,4 +1,4 @@
-const BASE_URL = "http://16.176.147.35/api";
+const BASE_URL = "/api";
 
 // 🔥 GET TOKEN
 const getToken = () =>
