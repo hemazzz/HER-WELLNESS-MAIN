@@ -30,7 +30,7 @@ const DietForm = () => {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/diet-plan", {
+      const res = await fetch("http://16.176.147.35/api/diet-plan", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

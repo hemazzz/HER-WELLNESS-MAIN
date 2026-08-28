@@ -23,7 +23,7 @@ const handleVerify = async () => {
   setLoading(true);
 
   try {
-    const res = await fetch("http://localhost:5000/api/auth/verify-otp", {
+    const res = await fetch("http://16.176.147.35/api/auth/verify-otp", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
